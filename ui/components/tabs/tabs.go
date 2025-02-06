@@ -14,9 +14,10 @@ import (
 )
 
 type Model struct {
-	sectionsConfigs []config.SectionConfig
-	sectionCounts   []*int
-	CurrSectionId   int
+	sectionsConfigs    []config.SectionConfig
+	sectionCounts      []*int
+	sectionIsFiltering []bool
+	CurrSectionId      int
 }
 
 func NewModel(ctx *context.ProgramContext) Model {
@@ -32,7 +33,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 func (m Model) View(ctx *context.ProgramContext) string {
 	sectionTitles := make([]string, 0, len(m.sectionsConfigs))
 	for i, section := range m.sectionsConfigs {
-		title := section.Title
+		filteringIsOnIndicator := "  "
+		if m.sectionIsFiltering[i] {
+			filteringIsOnIndicator = " "
+		}
+		title := fmt.Sprintf("%s %s", filteringIsOnIndicator, section.Title)
 		// handle search section
 		if i > 0 && m.sectionCounts[i] != nil && ctx.Config.Theme.Ui.SectionsShowCount {
 			title = fmt.Sprintf("%s (%s)", title, utils.ShortNumber(*m.sectionCounts[i]))
@@ -72,7 +77,9 @@ func (m *Model) UpdateSectionsConfigs(ctx *context.ProgramContext) {
 
 func (m *Model) UpdateSectionCounts(sections []section.Section) {
 	m.sectionCounts = make([]*int, len(sections))
+	m.sectionIsFiltering = make([]bool, len(sections))
 	for i, s := range sections {
+		m.sectionIsFiltering[i] = section.Section.IsFilteringByClone(s)
 		m.sectionCounts[i] = s.GetTotalCount()
 	}
 }

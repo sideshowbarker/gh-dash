@@ -239,3 +239,10 @@ properties:
             - less
             - delta
         default: less
+  smartFilteringAtLaunch:
+    title: Smart Filtering At Launch
+    description: |
+      Set this to `false` to disable [Smart Filtering](/getting-started/smartfiltering) at `gh-dash` launch.
+    type: boolean
+    schematize:
+      weight: 8

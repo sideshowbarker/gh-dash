@@ -2,11 +2,13 @@ package section
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/cli/go-gh/v2/pkg/repository"
 
 	"github.com/dlvhdr/gh-dash/v4/config"
 	"github.com/dlvhdr/gh-dash/v4/data"
@@ -39,17 +41,36 @@ type BaseModel struct {
 	PromptConfirmationAction  string
 	LastFetchTaskId           string
 	IsSearchSupported         bool
+	IsFilteredByCurrentRemote bool
 }
 
 type NewSectionOptions struct {
 	Id          int
 	Config      config.SectionConfig
+	Ctx         *context.ProgramContext
 	Type        string
 	Columns     []table.Column
 	Singular    string
 	Plural      string
 	LastUpdated time.Time
 	CreatedAt   time.Time
+}
+
+func (options NewSectionOptions) GetConfigFiltersWithCurrentRemoteAdded(ctx *context.ProgramContext) string {
+	searchValue := options.Config.Filters
+	if !ctx.Config.SmartFilteringAtLaunch {
+		return searchValue;
+	}
+	repo, err := repository.Current()
+	if err != nil {
+		return searchValue
+	}
+	for _, token := range strings.Fields(searchValue) {
+		if strings.HasPrefix(token, "repo:") {
+			return searchValue
+		}
+	}
+	return fmt.Sprintf("%s repo:%s/%s", searchValue, repo.Owner, repo.Name)
 }
 
 func NewModel(
@@ -67,13 +88,17 @@ func NewModel(
 		PluralForm:   options.Plural,
 		SearchBar: search.NewModel(ctx, search.SearchOptions{
 			Prefix:       fmt.Sprintf("is:%s", options.Type),
-			InitialValue: options.Config.Filters,
+			InitialValue: options.GetConfigFiltersWithCurrentRemoteAdded(ctx),
 		}),
-		SearchValue:           options.Config.Filters,
+		SearchValue:           options.GetConfigFiltersWithCurrentRemoteAdded(ctx),
 		IsSearching:           false,
+		IsFilteredByCurrentRemote: options.GetConfigFiltersWithCurrentRemoteAdded(ctx) != options.Config.Filters,
 		TotalCount:            0,
 		PageInfo:              nil,
 		PromptConfirmationBox: prompt.NewModel(ctx),
+	}
+	if !ctx.Config.SmartFilteringAtLaunch {
+		m.IsFilteredByCurrentRemote = false
 	}
 	m.Table = table.NewModel(
 		*ctx,
@@ -140,6 +165,7 @@ type Search interface {
 	ResetFilters()
 	GetFilters() string
 	ResetPageInfo()
+	IsFilteringByClone() bool
 }
 
 type PromptConfirmation interface {
@@ -155,6 +181,38 @@ func (m *BaseModel) GetDimensions() constants.Dimensions {
 		Width:  m.Ctx.MainContentWidth - m.Ctx.Styles.Section.ContainerStyle.GetHorizontalPadding(),
 		Height: m.Ctx.MainContentHeight - common.SearchHeight,
 	}
+}
+
+func (m *BaseModel) HasRepoNameInConfiguredFilter() bool {
+	filters := m.Config.Filters
+	for _, token := range strings.Fields(filters) {
+		if strings.HasPrefix(token, "repo:") {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *BaseModel) GetSearchValue() string {
+	searchValue := m.SearchValue
+	repo, err := repository.Current()
+	if err != nil {
+		return searchValue
+	}
+	if m.HasRepoNameInConfiguredFilter() {
+		return searchValue
+	}
+	currentCloneFilter := fmt.Sprintf("repo:%s/%s", repo.Owner, repo.Name)
+	var searchValueWithoutCurrentCloneFilter []string
+	for _, token := range strings.Fields(searchValue) {
+		if !strings.HasPrefix(token, currentCloneFilter) {
+			searchValueWithoutCurrentCloneFilter = append(searchValueWithoutCurrentCloneFilter, token)
+		}
+	}
+	if m.IsFilteredByCurrentRemote {
+		return fmt.Sprintf("%s %s", strings.Join(searchValueWithoutCurrentCloneFilter, " "), currentCloneFilter)
+	}
+	return strings.Join(searchValueWithoutCurrentCloneFilter, " ")
 }
 
 func (m *BaseModel) UpdateProgramContext(ctx *context.ProgramContext) {
@@ -228,7 +286,7 @@ func (m *BaseModel) SetIsSearching(val bool) tea.Cmd {
 }
 
 func (m *BaseModel) ResetFilters() {
-	m.SearchBar.SetValue(m.Config.Filters)
+	m.SearchBar.SetValue(m.GetSearchValue())
 }
 
 func (m *BaseModel) ResetPageInfo() {
@@ -281,6 +339,10 @@ func (m *BaseModel) MakeSectionCmd(cmd tea.Cmd) tea.Cmd {
 
 func (m *BaseModel) GetFilters() string {
 	return m.SearchBar.Value()
+}
+
+func (m *BaseModel) IsFilteringByClone() bool {
+	return m.IsFilteredByCurrentRemote
 }
 
 func (m *BaseModel) GetMainContent() string {
