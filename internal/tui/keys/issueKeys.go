@@ -18,6 +18,10 @@ type IssueKeyMap struct {
 	Reopen               key.Binding
 	ToggleSmartFiltering key.Binding
 	ViewPRs              key.Binding
+	QuoteReply           key.Binding
+	NextComment          key.Binding
+	PrevComment          key.Binding
+	EnterCommentNavMode  key.Binding
 }
 
 var IssueKeys = IssueKeyMap{
@@ -49,6 +53,22 @@ var IssueKeys = IssueKeyMap{
 		key.WithKeys("s"),
 		key.WithHelp("s", "switch to notifications"),
 	),
+	QuoteReply: key.NewBinding(
+		key.WithKeys("q"),
+		key.WithHelp("q", "quote reply"),
+	),
+	NextComment: key.NewBinding(
+		key.WithKeys("j"),
+		key.WithHelp("j", "next comment"),
+	),
+	PrevComment: key.NewBinding(
+		key.WithKeys("k"),
+		key.WithHelp("k", "prev comment"),
+	),
+	EnterCommentNavMode: key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "navigate comments"),
+	),
 }
 
 func IssueFullHelp() []key.Binding {
@@ -61,6 +81,7 @@ func IssueFullHelp() []key.Binding {
 		IssueKeys.Reopen,
 		IssueKeys.ToggleSmartFiltering,
 		IssueKeys.ViewPRs,
+		IssueKeys.EnterCommentNavMode,
 	}
 }
 
@@ -105,6 +126,14 @@ func rebindIssueKeys(keys []config.Keybinding) error {
 			key = &IssueKeys.Reopen
 		case "viewPrs":
 			key = &IssueKeys.ViewPRs
+		case "quoteReply":
+			key = &IssueKeys.QuoteReply
+		case "nextComment":
+			key = &IssueKeys.NextComment
+		case "prevComment":
+			key = &IssueKeys.PrevComment
+		case "enterCommentNavMode":
+			key = &IssueKeys.EnterCommentNavMode
 		default:
 			return fmt.Errorf("unknown built-in issue key: '%s'", issueKey.Builtin)
 		}

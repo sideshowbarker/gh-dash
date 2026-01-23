@@ -197,6 +197,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+		if m.issueSidebar.IsCommentNavMode() {
+			var action *issueview.IssueAction
+			m.issueSidebar, cmd, action = m.issueSidebar.Update(msg)
+			if action != nil && action.Type == issueview.IssueActionQuoteReply {
+				comment := m.issueSidebar.GetSelectedComment()
+				if comment != nil {
+					cmd = m.issueSidebar.SetIsQuoteReplying(comment)
+					m.syncSidebar()
+					m.sidebar.ScrollToBottom()
+					return m, cmd
+				}
+			}
+			m.syncSidebar()
+			// Scroll to show selected comment
+			if percent := m.issueSidebar.GetCommentScrollPercent(); percent >= 0 {
+				m.sidebar.ScrollToPercent(percent)
+			}
+			return m, cmd
+		}
+
 		if m.footer.ShowConfirmQuit && (msg.String() == "y" || msg.String() == "enter") {
 			return m, tea.Quit
 		} else if m.footer.ShowConfirmQuit {
@@ -466,6 +486,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return m, cmd
 
+			case key.Matches(msg, keys.IssueKeys.EnterCommentNavMode):
+				if m.sidebar.IsOpen {
+					m.issueSidebar.EnterCommentNavMode()
+					m.syncSidebar()
+				}
+				return m, nil
+
 			case key.Matches(msg, keys.IssueKeys.ViewPRs):
 				m.ctx.View = m.switchSelectedView()
 				m.syncMainContentWidth()
@@ -572,7 +599,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 					case issueview.IssueActionReopen:
 						return m, m.promptConfirmation(currSection, "reopen")
+
+					case issueview.IssueActionEnterCommentNavMode:
+						m.issueSidebar.EnterCommentNavMode()
+						m.syncSidebar()
+						return m, nil
+
+					case issueview.IssueActionQuoteReply:
+						comment := m.issueSidebar.GetSelectedComment()
+						if comment != nil {
+							cmd = m.issueSidebar.SetIsQuoteReplying(comment)
+							m.syncSidebar()
+							m.sidebar.ScrollToBottom()
+							return m, cmd
+						}
+						return m, nil
 					}
+				}
+
+				// Sync sidebar if in comment nav mode (to show selection changes)
+				if m.issueSidebar.IsCommentNavMode() {
+					m.syncSidebar()
 				}
 
 				if issueCmd != nil {
@@ -871,11 +918,63 @@ func (m Model) View() string {
 						Render(m.ctx.Error.Error()),
 				)),
 		)
+	} else if m.issueSidebar.IsCommentNavMode() {
+		s.WriteString(m.renderCommentNavFooter())
 	} else {
 		s.WriteString(m.footer.View())
 	}
 
 	return zone.Scan(s.String())
+}
+
+func (m Model) renderCommentNavFooter() string {
+	selectedIdx := m.issueSidebar.GetSelectedCommentIndex()
+	numComments := m.issueSidebar.GetNumComments()
+
+	modeStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(m.ctx.Theme.PrimaryText).
+		Background(m.ctx.Theme.SelectedBackground).
+		Padding(0, 1)
+
+	counterStyle := lipgloss.NewStyle().
+		Foreground(m.ctx.Theme.SecondaryText).
+		Padding(0, 1)
+
+	keyStyle := lipgloss.NewStyle().
+		Foreground(m.ctx.Theme.PrimaryText).
+		Bold(true)
+
+	descStyle := lipgloss.NewStyle().
+		Foreground(m.ctx.Theme.FaintText)
+
+	separator := lipgloss.NewStyle().
+		Foreground(m.ctx.Theme.FaintBorder).
+		Render(" │ ")
+
+	mode := modeStyle.Render("COMMENT NAV")
+	counter := counterStyle.Render(fmt.Sprintf("%d/%d", selectedIdx+1, numComments))
+
+	keys := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		keyStyle.Render("j/k"), descStyle.Render(" navigate"), separator,
+		keyStyle.Render("q"), descStyle.Render(" quote reply"), separator,
+		keyStyle.Render("Esc"), descStyle.Render(" exit"),
+	)
+
+	content := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		mode,
+		separator,
+		counter,
+		separator,
+		keys,
+	)
+
+	return lipgloss.NewStyle().
+		Width(m.ctx.ScreenWidth).
+		Padding(0, 1).
+		Render(content)
 }
 
 type initMsg struct {

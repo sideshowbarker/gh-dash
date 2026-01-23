@@ -14,6 +14,7 @@ import (
 
 type RenderedActivity struct {
 	UpdatedAt      time.Time
+	OriginalIndex  int
 	RenderedString string
 }
 
@@ -21,21 +22,31 @@ func (m *Model) renderActivity() string {
 	width := m.getIndentedContentWidth() - 2
 	markdownRenderer := markdown.GetMarkdownRenderer(width)
 
+	// First pass: collect comments with their original indices
 	var activity []RenderedActivity
-	for _, comment := range m.issue.Data.Comments.Nodes {
-		renderedComment, err := m.renderComment(comment, markdownRenderer)
-		if err != nil {
-			continue
-		}
+	for i, comment := range m.issue.Data.Comments.Nodes {
 		activity = append(activity, RenderedActivity{
-			UpdatedAt:      comment.UpdatedAt,
-			RenderedString: renderedComment,
+			UpdatedAt:     comment.UpdatedAt,
+			OriginalIndex: i,
 		})
 	}
 
+	// Sort by UpdatedAt (oldest first)
 	sort.Slice(activity, func(i, j int) bool {
 		return activity[i].UpdatedAt.Before(activity[j].UpdatedAt)
 	})
+
+	// Second pass: render comments in sorted order
+	for sortedIdx := range activity {
+		origIdx := activity[sortedIdx].OriginalIndex
+		comment := m.issue.Data.Comments.Nodes[origIdx]
+		isSelected := sortedIdx == m.selectedCommentIndex
+		renderedComment, err := m.renderComment(comment, markdownRenderer, isSelected)
+		if err != nil {
+			continue
+		}
+		activity[sortedIdx].RenderedString = renderedComment
+	}
 
 	body := ""
 	bodyStyle := lipgloss.NewStyle().PaddingLeft(2)
@@ -63,12 +74,18 @@ func renderEmptyState() string {
 	return lipgloss.NewStyle().Italic(true).Render("No comments...")
 }
 
-func (m *Model) renderComment(comment data.IssueComment, markdownRenderer glamour.TermRenderer) (string, error) {
+func (m *Model) renderComment(comment data.IssueComment, markdownRenderer glamour.TermRenderer, isSelected bool) (string, error) {
 	width := m.getIndentedContentWidth() - 2
+
+	borderColor := m.ctx.Theme.FaintBorder
+	if isSelected {
+		borderColor = m.ctx.Theme.PrimaryBorder
+	}
+
 	header := lipgloss.NewStyle().
 		Width(width).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(m.ctx.Theme.FaintBorder).Render(
+		BorderForeground(borderColor).Render(
 		lipgloss.JoinHorizontal(lipgloss.Top,
 			m.ctx.Styles.Common.MainTextStyle.Render(comment.Author.Login),
 			" ",

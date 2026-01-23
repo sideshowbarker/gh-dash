@@ -69,9 +69,11 @@ For example:
 ```yaml
 keybindings:
   issues:
-    key: "P"
-    command: >
-      gh issue pin {{ .IssueNumber }} --repo {{ .RepoName }}
+    - key: "P"
+      command: >
+        gh issue pin {{ .IssueNumber }} --repo {{ .RepoName }}
+    - key: "r"
+      builtin: quoteReply
 ```
 
 The available arguments are:
@@ -82,3 +84,21 @@ The available arguments are:
 | `RepoPath`    | The path to the Repo, using the `config.yml` `repoPaths` key to get the mapping |
 | `IssueNumber` | The issue number                                                                |
 | `Author`      | The username of the issue author                                                |
+
+### Issue Builtin Commands
+
+The following builtin commands can be rebound using the `builtin` property:
+
+| Builtin               | Default Key | Description                                      |
+| --------------------- | ----------- | ------------------------------------------------ |
+| `label`               | `L`         | Add or remove labels from the issue              |
+| `assign`              | (none)      | Assign users to the issue                        |
+| `unassign`            | `A`         | Unassign users from the issue                    |
+| `comment`             | `c`         | Add a comment to the issue                       |
+| `close`               | `x`         | Close the issue                                  |
+| `reopen`              | `X`         | Reopen a closed issue                            |
+| `viewPrs`             | `s`         | Switch to notifications view                     |
+| `quoteReply`          | `q`         | Quote reply to selected comment (in nav mode)    |
+| `nextComment`         | `j`         | Navigate to next comment (in nav mode)           |
+| `prevComment`         | `k`         | Navigate to previous comment (in nav mode)       |
+| `enterCommentNavMode` | `tab`       | Enter comment navigation mode                    |

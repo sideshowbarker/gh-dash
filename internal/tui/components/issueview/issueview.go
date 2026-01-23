@@ -3,6 +3,7 @@ package issueview
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -42,11 +43,13 @@ type Model struct {
 	sectionId int
 	width     int
 
-	ShowConfirmCancel bool
-	isCommenting      bool
-	isLabeling        bool
-	isAssigning       bool
-	isUnassigning     bool
+	ShowConfirmCancel    bool
+	isCommenting         bool
+	isLabeling           bool
+	isAssigning          bool
+	isUnassigning        bool
+	isCommentNavMode     bool
+	selectedCommentIndex int
 
 	inputBox   inputbox.Model
 	ac         *autocomplete.Model
@@ -68,10 +71,11 @@ func NewModel(ctx *context.ProgramContext) Model {
 	return Model{
 		issue: nil,
 
-		isCommenting:  false,
-		isLabeling:    false,
-		isAssigning:   false,
-		isUnassigning: false,
+		isCommenting:         false,
+		isLabeling:           false,
+		isAssigning:          false,
+		isUnassigning:        false,
+		selectedCommentIndex: -1,
 
 		inputBox:   inputBox,
 		ac:         &ac,
@@ -129,6 +133,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
 				}
 				m.inputBox.Blur()
 				m.isCommenting = false
+				m.restoreInputBoxHeight()
 				return m, cmd, nil
 
 			case tea.KeyEsc, tea.KeyCtrlC:
@@ -232,6 +237,22 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
 
 			m.inputBox, taCmd = m.inputBox.Update(msg)
 			cmds = append(cmds, cmd, taCmd)
+		} else if m.isCommentNavMode {
+			// Comment navigation mode: j/k navigate, q quotes, Esc/Tab exits
+			switch {
+			case key.Matches(msg, keys.IssueKeys.NextComment):
+				m.SelectNextComment()
+				return m, nil, nil
+			case key.Matches(msg, keys.IssueKeys.PrevComment):
+				m.SelectPrevComment()
+				return m, nil, nil
+			case key.Matches(msg, keys.IssueKeys.QuoteReply):
+				return m, nil, &IssueAction{Type: IssueActionQuoteReply}
+			case msg.Type == tea.KeyEsc, key.Matches(msg, keys.IssueKeys.EnterCommentNavMode):
+				m.ExitCommentNavMode()
+				return m, nil, nil
+			}
+			return m, nil, nil
 		} else {
 			switch {
 			case key.Matches(msg, keys.IssueKeys.Label):
@@ -246,6 +267,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
 				return m, nil, &IssueAction{Type: IssueActionClose}
 			case key.Matches(msg, keys.IssueKeys.Reopen):
 				return m, nil, &IssueAction{Type: IssueActionReopen}
+			case key.Matches(msg, keys.IssueKeys.EnterCommentNavMode):
+				return m, nil, &IssueAction{Type: IssueActionEnterCommentNavMode}
 			}
 			return m, nil, nil
 		}
@@ -386,15 +409,63 @@ func (m *Model) SetSectionId(id int) {
 }
 
 func (m *Model) SetRow(data *data.IssueData) {
+	// Only reset comment nav state if the issue actually changes
+	isNewIssue := true
+	if data != nil && m.issue != nil && m.issue.Data.Url == data.Url {
+		isNewIssue = false
+	}
+
 	if data == nil {
 		m.issue = nil
 	} else {
 		m.issue = &issuerow.Issue{Ctx: m.ctx, Data: *data}
 	}
+
+	if isNewIssue {
+		m.selectedCommentIndex = -1
+		m.isCommentNavMode = false
+	}
 }
 
 func (m *Model) IsTextInputBoxFocused() bool {
 	return m.isCommenting || m.isAssigning || m.isUnassigning || m.isLabeling
+}
+
+func (m *Model) IsCommentNavMode() bool {
+	return m.isCommentNavMode
+}
+
+func (m *Model) EnterCommentNavMode() {
+	if m.issue == nil || m.GetNumComments() == 0 {
+		return
+	}
+	m.isCommentNavMode = true
+	// Select first comment if none selected
+	if m.selectedCommentIndex < 0 {
+		m.selectedCommentIndex = 0
+	}
+}
+
+func (m *Model) ExitCommentNavMode() {
+	m.isCommentNavMode = false
+	m.selectedCommentIndex = -1
+}
+
+// GetCommentScrollPercent returns the approximate scroll percentage to show the selected comment.
+// Returns -1 if no comment is selected.
+func (m *Model) GetCommentScrollPercent() float64 {
+	if m.selectedCommentIndex < 0 {
+		return -1
+	}
+	numComments := m.GetNumComments()
+	if numComments == 0 {
+		return -1
+	}
+	// Comments are at the bottom of the view, so we estimate based on comment position.
+	// Assume the header/body takes about 30% of the view, comments take 70%.
+	basePercent := 0.30
+	commentPercent := 0.70 * (float64(m.selectedCommentIndex) / float64(numComments))
+	return basePercent + commentPercent
 }
 
 func (m *Model) GetIsCommenting() bool {
@@ -410,6 +481,7 @@ func (m *Model) shouldCancelComment() bool {
 	m.inputBox.Blur()
 	m.isCommenting = false
 	m.ShowConfirmCancel = false
+	m.restoreInputBoxHeight()
 	return true
 }
 
@@ -421,6 +493,7 @@ func (m *Model) SetIsCommenting(isCommenting bool) tea.Cmd {
 	if !m.isCommenting && isCommenting {
 		m.inputBox.Reset()
 		m.ac.Reset() // Clear any stale autocomplete state (e.g., from labeling)
+		m.expandInputBoxForCommenting()
 	}
 	m.isCommenting = isCommenting
 	m.inputBox.SetPrompt(constants.CommentPrompt)
@@ -429,6 +502,20 @@ func (m *Model) SetIsCommenting(isCommenting bool) tea.Cmd {
 		return tea.Sequence(textarea.Blink, m.inputBox.Focus())
 	}
 	return nil
+}
+
+func (m *Model) expandInputBoxForCommenting() {
+	// Set input box to about 75% of the main content height
+	expandedHeight := int(float64(m.ctx.MainContentHeight) * 0.75)
+	if expandedHeight < common.InputBoxHeight {
+		expandedHeight = common.InputBoxHeight
+	}
+	m.inputBox.SetHeight(expandedHeight)
+}
+
+func (m *Model) restoreInputBoxHeight() {
+	linesToAdjust := 5
+	m.inputBox.SetHeight(common.InputBoxHeight - linesToAdjust)
 }
 
 func (m *Model) GetIsAssigning() bool {
@@ -558,4 +645,93 @@ func (m *Model) UpdateProgramContext(ctx *context.ProgramContext) {
 	m.ctx = ctx
 	m.inputBox.UpdateProgramContext(ctx)
 	m.ac.UpdateProgramContext(ctx)
+}
+
+func (m *Model) GetNumComments() int {
+	if m.issue == nil {
+		return 0
+	}
+	return len(m.issue.Data.Comments.Nodes)
+}
+
+func (m *Model) GetSelectedCommentIndex() int {
+	return m.selectedCommentIndex
+}
+
+func (m *Model) SelectNextComment() {
+	numComments := m.GetNumComments()
+	if numComments == 0 {
+		return
+	}
+	if m.selectedCommentIndex < numComments-1 {
+		m.selectedCommentIndex++
+	}
+}
+
+func (m *Model) SelectPrevComment() {
+	if m.selectedCommentIndex > 0 {
+		m.selectedCommentIndex--
+	} else if m.selectedCommentIndex == -1 && m.GetNumComments() > 0 {
+		m.selectedCommentIndex = 0
+	}
+}
+
+func (m *Model) ResetCommentSelection() {
+	m.selectedCommentIndex = -1
+}
+
+func (m *Model) GetSelectedComment() *data.IssueComment {
+	if m.issue == nil || m.selectedCommentIndex < 0 {
+		return nil
+	}
+	comments := m.issue.Data.Comments.Nodes
+	if m.selectedCommentIndex >= len(comments) {
+		return nil
+	}
+
+	// Sort comments by UpdatedAt to match rendering order
+	type indexedComment struct {
+		index   int
+		comment data.IssueComment
+	}
+	sorted := make([]indexedComment, len(comments))
+	for i, c := range comments {
+		sorted[i] = indexedComment{index: i, comment: c}
+	}
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].comment.UpdatedAt.Before(sorted[j].comment.UpdatedAt)
+	})
+
+	return &sorted[m.selectedCommentIndex].comment
+}
+
+func (m *Model) SetIsQuoteReplying(comment *data.IssueComment) tea.Cmd {
+	if m.issue == nil || comment == nil {
+		return nil
+	}
+
+	m.inputBox.Reset()
+	m.isCommenting = true
+	m.expandInputBoxForCommenting()
+
+	// Format the quoted comment
+	var quotedLines []string
+	quotedLines = append(quotedLines, fmt.Sprintf("> @%s wrote:", comment.Author.Login))
+	quotedLines = append(quotedLines, ">")
+
+	// Split comment body into lines and quote each
+	bodyLines := strings.Split(comment.Body, "\n")
+	for _, line := range bodyLines {
+		quotedLines = append(quotedLines, "> "+line)
+	}
+
+	// Add empty line after quote for user's reply
+	quotedLines = append(quotedLines, "")
+	quotedLines = append(quotedLines, "")
+
+	quotedText := strings.Join(quotedLines, "\n")
+	m.inputBox.SetValue(quotedText)
+	m.inputBox.SetPrompt("Reply to comment...")
+
+	return tea.Sequence(textarea.Blink, m.inputBox.Focus())
 }

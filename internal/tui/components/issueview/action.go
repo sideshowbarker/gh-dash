@@ -11,6 +11,10 @@ const (
 	IssueActionComment
 	IssueActionClose
 	IssueActionReopen
+	IssueActionQuoteReply
+	IssueActionNextComment
+	IssueActionPrevComment
+	IssueActionEnterCommentNavMode
 )
 
 // IssueAction represents an action to be performed on an issue.
