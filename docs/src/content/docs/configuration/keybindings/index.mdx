@@ -60,6 +60,33 @@ The available arguments are:
 | `BaseRefName` | The PR's base branch name                                                       |
 | `Author`      | The username of the PR author                                                   |
 
+### PR Builtin Commands
+
+The following builtin commands can be rebound using the `builtin` property:
+
+| Builtin               | Default Key | Description                                      |
+| --------------------- | ----------- | ------------------------------------------------ |
+| `prevSidebarTab`      | `[`         | Go to previous sidebar tab                       |
+| `nextSidebarTab`      | `]`         | Go to next sidebar tab                           |
+| `approve`             | `v`         | Approve the PR                                   |
+| `assign`              | `a`         | Assign users to the PR                           |
+| `unassign`            | `A`         | Unassign users from the PR                       |
+| `comment`             | `c`         | Add a comment to the PR                          |
+| `diff`                | `d`         | View PR diff                                     |
+| `checkout`            | `C`/`Space` | Checkout the PR locally                          |
+| `close`               | `x`         | Close the PR                                     |
+| `ready`               | `W`         | Mark PR as ready for review                      |
+| `reopen`              | `X`         | Reopen a closed PR                               |
+| `merge`               | `m`         | Merge the PR                                     |
+| `update`              | `u`         | Update PR from base branch                       |
+| `watchChecks`         | `w`         | Watch PR checks                                  |
+| `viewIssues`          | `s`         | Switch to issues view                            |
+| `summaryViewMore`     | `e`         | Expand description                               |
+| `quoteReply`          | `q`         | Quote reply to selected comment (in nav mode)    |
+| `nextComment`         | `j`         | Navigate to next comment (in nav mode)           |
+| `prevComment`         | `k`         | Navigate to previous comment (in nav mode)       |
+| `enterCommentNavMode` | `tab`       | Enter comment navigation mode                    |
+
 ## Issue Keybindings
 
 Define any number of keybindings for the issues view or override existing ones.

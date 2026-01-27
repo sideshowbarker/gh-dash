@@ -114,3 +114,37 @@ prompting for confirmation.
 **Since v3.10.0:** When you use these command,s the dashboard displays a confirmation prompt.
 
 </Aside>
+
+## `Tab` - Enter Comment Navigation Mode
+
+Press <kbd>Tab</kbd> when the preview pane is open and you're on the Activity tab to enter comment
+navigation mode. This mode allows you to navigate between individual comments on the PR and quote
+reply to them.
+
+When comment navigation mode is active, the selected comment is highlighted with a border and a
+footer indicator shows the available keys.
+
+To exit comment navigation mode, press <kbd>Tab</kbd> again or <kbd>Esc</kbd>.
+
+### `j` / `k` - Navigate Comments
+
+While in comment navigation mode, press <kbd>j</kbd> to move to the next comment or <kbd>k</kbd>
+to move to the previous comment. The preview pane scrolls automatically to keep the selected
+comment visible.
+
+### `q` - Quote Reply
+
+While in comment navigation mode with a comment selected, press <kbd>q</kbd> to quote reply to
+that comment. The dashboard opens the comment input with the selected comment pre-populated as a
+markdown blockquote, formatted as:
+
+```markdown
+> @username wrote:
+>
+> Original comment text here...
+
+(your reply goes here)
+```
+
+You can then add your reply text below the quote. Press <kbd>Ctrl</kbd>+<kbd>d</kbd> to submit
+the comment or <kbd>Ctrl</kbd>+<kbd>c</kbd> / <kbd>Esc</kbd> to cancel.
