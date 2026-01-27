@@ -24,6 +24,10 @@ const (
 	PRActionMerge
 	PRActionUpdate
 	PRActionSummaryViewMore
+	PRActionQuoteReply
+	PRActionNextComment
+	PRActionPrevComment
+	PRActionEnterCommentNavMode
 )
 
 // PRAction represents an action to be performed on a PR.
@@ -63,6 +67,14 @@ func MsgToAction(msg tea.Msg) *PRAction {
 		return &PRAction{Type: PRActionUpdate}
 	case key.Matches(keyMsg, keys.PRKeys.SummaryViewMore):
 		return &PRAction{Type: PRActionSummaryViewMore}
+	case key.Matches(keyMsg, keys.PRKeys.QuoteReply):
+		return &PRAction{Type: PRActionQuoteReply}
+	case key.Matches(keyMsg, keys.PRKeys.NextComment):
+		return &PRAction{Type: PRActionNextComment}
+	case key.Matches(keyMsg, keys.PRKeys.PrevComment):
+		return &PRAction{Type: PRActionPrevComment}
+	case key.Matches(keyMsg, keys.PRKeys.EnterCommentNavMode):
+		return &PRAction{Type: PRActionEnterCommentNavMode}
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package prview
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -36,12 +37,14 @@ type Model struct {
 	width     int
 	carousel  carousel.Model
 
-	ShowConfirmCancel bool
-	isCommenting      bool
-	isApproving       bool
-	isAssigning       bool
-	isUnassigning     bool
-	summaryViewMore   bool
+	ShowConfirmCancel    bool
+	isCommenting         bool
+	isApproving          bool
+	isAssigning          bool
+	isUnassigning        bool
+	summaryViewMore      bool
+	isCommentNavMode     bool
+	selectedCommentIndex int
 
 	inputBox inputbox.Model
 }
@@ -60,11 +63,12 @@ func NewModel(ctx *context.ProgramContext) Model {
 	return Model{
 		pr: nil,
 
-		isCommenting:  false,
-		isApproving:   false,
-		isAssigning:   false,
-		isUnassigning: false,
-		carousel:      c,
+		isCommenting:         false,
+		isApproving:          false,
+		isAssigning:          false,
+		isUnassigning:        false,
+		selectedCommentIndex: -1,
+		carousel:             c,
 
 		inputBox: inputBox,
 	}
@@ -87,6 +91,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 				}
 				m.inputBox.Blur()
 				m.isCommenting = false
+				m.restoreInputBoxHeight()
 				return m, cmd
 
 			case tea.KeyEsc, tea.KeyCtrlC:
@@ -616,6 +621,7 @@ func (m *Model) shouldCancelComment() bool {
 	m.isCommenting = false
 	m.isApproving = false
 	m.ShowConfirmCancel = false
+	m.restoreInputBoxHeight()
 	return true
 }
 
@@ -750,4 +756,159 @@ func (m *Model) SetEnrichedPR(data data.EnrichedPullRequestData) {
 		m.pr.Data.Enriched = data
 		m.pr.Data.IsEnriched = true
 	}
+}
+
+func (m *Model) IsCommentNavMode() bool {
+	return m.isCommentNavMode
+}
+
+func (m *Model) EnterCommentNavMode() {
+	if m.pr == nil || m.GetNumComments() == 0 {
+		return
+	}
+	m.isCommentNavMode = true
+	// Select first comment if none selected
+	if m.selectedCommentIndex < 0 {
+		m.selectedCommentIndex = 0
+	}
+}
+
+func (m *Model) ExitCommentNavMode() {
+	m.isCommentNavMode = false
+	m.selectedCommentIndex = -1
+}
+
+func (m *Model) GetNumComments() int {
+	if m.pr == nil || !m.pr.Data.IsEnriched {
+		return 0
+	}
+	count := 0
+	// Count review thread comments
+	for _, review := range m.pr.Data.Enriched.ReviewThreads.Nodes {
+		count += len(review.Comments.Nodes)
+	}
+	// Count general PR comments
+	count += len(m.pr.Data.Enriched.Comments.Nodes)
+	return count
+}
+
+func (m *Model) GetSelectedCommentIndex() int {
+	return m.selectedCommentIndex
+}
+
+func (m *Model) SelectNextComment() {
+	numComments := m.GetNumComments()
+	if numComments == 0 {
+		return
+	}
+	if m.selectedCommentIndex < numComments-1 {
+		m.selectedCommentIndex++
+	}
+}
+
+func (m *Model) SelectPrevComment() {
+	if m.selectedCommentIndex > 0 {
+		m.selectedCommentIndex--
+	} else if m.selectedCommentIndex == -1 && m.GetNumComments() > 0 {
+		m.selectedCommentIndex = 0
+	}
+}
+
+// GetCommentScrollPercent returns the approximate scroll percentage to show the selected comment.
+func (m *Model) GetCommentScrollPercent() float64 {
+	if m.selectedCommentIndex < 0 {
+		return -1
+	}
+	numComments := m.GetNumComments()
+	if numComments == 0 {
+		return -1
+	}
+	// Comments are at the bottom of the view, so we estimate based on comment position.
+	basePercent := 0.30
+	commentPercent := 0.70 * (float64(m.selectedCommentIndex) / float64(numComments))
+	return basePercent + commentPercent
+}
+
+// GetSelectedComment returns the currently selected comment for quote reply.
+func (m *Model) GetSelectedComment() *comment {
+	if m.pr == nil || !m.pr.Data.IsEnriched || m.selectedCommentIndex < 0 {
+		return nil
+	}
+
+	// Build sorted list of all comments (same order as rendered)
+	var comments []comment
+	for _, review := range m.pr.Data.Enriched.ReviewThreads.Nodes {
+		path := review.Path
+		line := review.Line
+		for _, c := range review.Comments.Nodes {
+			comments = append(comments, comment{
+				Author:    c.Author.Login,
+				Body:      c.Body,
+				UpdatedAt: c.UpdatedAt,
+				Path:      &path,
+				Line:      &line,
+			})
+		}
+	}
+	for _, c := range m.pr.Data.Enriched.Comments.Nodes {
+		comments = append(comments, comment{
+			Author:    c.Author.Login,
+			Body:      c.Body,
+			UpdatedAt: c.UpdatedAt,
+		})
+	}
+
+	// Sort by UpdatedAt (oldest first) to match render order
+	sort.Slice(comments, func(i, j int) bool {
+		return comments[i].UpdatedAt.Before(comments[j].UpdatedAt)
+	})
+
+	if m.selectedCommentIndex >= len(comments) {
+		return nil
+	}
+	return &comments[m.selectedCommentIndex]
+}
+
+func (m *Model) SetIsQuoteReplying(c *comment) tea.Cmd {
+	if m.pr == nil || c == nil {
+		return nil
+	}
+
+	m.inputBox.Reset()
+	m.isCommenting = true
+	m.expandInputBoxForCommenting()
+
+	// Format the quoted comment
+	var quotedLines []string
+	quotedLines = append(quotedLines, fmt.Sprintf("> @%s wrote:", c.Author))
+	quotedLines = append(quotedLines, ">")
+
+	// Split comment body into lines and quote each
+	bodyLines := strings.Split(c.Body, "\n")
+	for _, line := range bodyLines {
+		quotedLines = append(quotedLines, "> "+line)
+	}
+
+	// Add empty line after quote for user's reply
+	quotedLines = append(quotedLines, "")
+	quotedLines = append(quotedLines, "")
+
+	quotedText := strings.Join(quotedLines, "\n")
+	m.inputBox.SetValue(quotedText)
+	m.inputBox.SetPrompt("Reply to comment...")
+
+	return tea.Sequence(textarea.Blink, m.inputBox.Focus())
+}
+
+func (m *Model) expandInputBoxForCommenting() {
+	// Set input box to about 75% of the main content height
+	expandedHeight := int(float64(m.ctx.MainContentHeight) * 0.75)
+	if expandedHeight < common.InputBoxHeight {
+		expandedHeight = common.InputBoxHeight
+	}
+	m.inputBox.SetHeight(expandedHeight)
+}
+
+func (m *Model) restoreInputBoxHeight() {
+	m.inputBox.SetHeight(common.InputBoxHeight)
 }

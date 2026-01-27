@@ -17,6 +17,7 @@ import (
 type RenderedActivity struct {
 	UpdatedAt      time.Time
 	RenderedString string
+	IsComment      bool // true for comments, false for reviews
 }
 
 func (m *Model) renderActivity() string {
@@ -53,14 +54,22 @@ func (m *Model) renderActivity() string {
 		})
 	}
 
-	for _, comment := range comments {
-		renderedComment, err := m.renderComment(comment, markdownRenderer)
+	// Sort comments first to establish indices
+	sort.Slice(comments, func(i, j int) bool {
+		return comments[i].UpdatedAt.Before(comments[j].UpdatedAt)
+	})
+
+	// Render comments with selection highlighting
+	for idx, c := range comments {
+		isSelected := m.isCommentNavMode && idx == m.selectedCommentIndex
+		renderedComment, err := m.renderComment(c, markdownRenderer, isSelected)
 		if err != nil {
 			continue
 		}
 		activities = append(activities, RenderedActivity{
-			UpdatedAt:      comment.UpdatedAt,
+			UpdatedAt:      c.UpdatedAt,
 			RenderedString: renderedComment,
+			IsComment:      true,
 		})
 	}
 
@@ -72,6 +81,7 @@ func (m *Model) renderActivity() string {
 		activities = append(activities, RenderedActivity{
 			UpdatedAt:      review.UpdatedAt,
 			RenderedString: renderedReview,
+			IsComment:      false,
 		})
 	}
 
@@ -108,25 +118,31 @@ type comment struct {
 	Line      *int
 }
 
-func (m *Model) renderComment(comment comment, markdownRenderer glamour.TermRenderer) (string, error) {
+func (m *Model) renderComment(c comment, markdownRenderer glamour.TermRenderer, isSelected bool) (string, error) {
 	width := m.getIndentedContentWidth()
+
+	borderColor := m.ctx.Theme.FaintBorder
+	if isSelected {
+		borderColor = m.ctx.Theme.PrimaryBorder
+	}
+
 	authorAndTime := lipgloss.NewStyle().
 		Width(width).
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(m.ctx.Theme.FaintBorder).Render(
+		BorderForeground(borderColor).Render(
 		lipgloss.JoinHorizontal(lipgloss.Top,
-			m.ctx.Styles.Common.MainTextStyle.Render(comment.Author),
+			m.ctx.Styles.Common.MainTextStyle.Render(c.Author),
 			" ",
-			lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Render(utils.TimeElapsed(comment.UpdatedAt)),
+			lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Render(utils.TimeElapsed(c.UpdatedAt)),
 		))
 
 	var header string
-	if comment.Path != nil && comment.Line != nil {
+	if c.Path != nil && c.Line != nil {
 		filePath := lipgloss.NewStyle().Foreground(m.ctx.Theme.FaintText).Width(width).Render(
 			fmt.Sprintf(
 				"%s#l%d",
-				*comment.Path,
-				*comment.Line,
+				*c.Path,
+				*c.Line,
 			),
 		)
 		header = lipgloss.JoinVertical(lipgloss.Left, authorAndTime, filePath, "")
@@ -134,7 +150,7 @@ func (m *Model) renderComment(comment comment, markdownRenderer glamour.TermRend
 		header = authorAndTime
 	}
 
-	body := lineCleanupRegex.ReplaceAllString(comment.Body, "")
+	body := lineCleanupRegex.ReplaceAllString(c.Body, "")
 	body, err := markdownRenderer.Render(body)
 
 	return lipgloss.JoinVertical(

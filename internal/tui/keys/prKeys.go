@@ -27,6 +27,10 @@ type PRKeyMap struct {
 	WatchChecks          key.Binding
 	ToggleSmartFiltering key.Binding
 	ViewIssues           key.Binding
+	QuoteReply           key.Binding
+	NextComment          key.Binding
+	PrevComment          key.Binding
+	EnterCommentNavMode  key.Binding
 }
 
 var PRKeys = PRKeyMap{
@@ -97,6 +101,22 @@ var PRKeys = PRKeyMap{
 	ViewIssues: key.NewBinding(
 		key.WithKeys("s"),
 		key.WithHelp("s", "switch to issues"),
+	),
+	QuoteReply: key.NewBinding(
+		key.WithKeys("q"),
+		key.WithHelp("q", "quote reply"),
+	),
+	NextComment: key.NewBinding(
+		key.WithKeys("j"),
+		key.WithHelp("j", "next comment"),
+	),
+	PrevComment: key.NewBinding(
+		key.WithKeys("k"),
+		key.WithHelp("k", "prev comment"),
+	),
+	EnterCommentNavMode: key.NewBinding(
+		key.WithKeys("tab"),
+		key.WithHelp("tab", "navigate comments"),
 	),
 }
 
@@ -180,6 +200,14 @@ func rebindPRKeys(keys []config.Keybinding) error {
 			key = &PRKeys.ViewIssues
 		case "summaryViewMore":
 			key = &PRKeys.SummaryViewMore
+		case "quoteReply":
+			key = &PRKeys.QuoteReply
+		case "nextComment":
+			key = &PRKeys.NextComment
+		case "prevComment":
+			key = &PRKeys.PrevComment
+		case "enterCommentNavMode":
+			key = &PRKeys.EnterCommentNavMode
 		default:
 			return fmt.Errorf("unknown built-in pr key: '%s'", prKey.Builtin)
 		}
