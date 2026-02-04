@@ -248,6 +248,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
 				return m, nil, nil
 			case key.Matches(msg, keys.IssueKeys.QuoteReply):
 				return m, nil, &IssueAction{Type: IssueActionQuoteReply}
+			case key.Matches(msg, keys.IssueKeys.EditorComment):
+				return m, nil, &IssueAction{Type: IssueActionEditorComment}
 			case msg.Type == tea.KeyEsc, key.Matches(msg, keys.IssueKeys.EnterCommentNavMode):
 				m.ExitCommentNavMode()
 				return m, nil, nil
@@ -705,6 +707,22 @@ func (m *Model) GetSelectedComment() *data.IssueComment {
 	})
 
 	return &sorted[m.selectedCommentIndex].comment
+}
+
+func (m *Model) GetSelectedCommentQuote() string {
+	c := m.GetSelectedComment()
+	if c == nil {
+		return ""
+	}
+	var lines []string
+	lines = append(lines, fmt.Sprintf("> @%s wrote:", c.Author.Login))
+	lines = append(lines, ">")
+	for _, line := range strings.Split(c.Body, "\n") {
+		lines = append(lines, "> "+line)
+	}
+	lines = append(lines, "")
+	lines = append(lines, "")
+	return strings.Join(lines, "\n")
 }
 
 func (m *Model) SetIsQuoteReplying(comment *data.IssueComment) tea.Cmd {

@@ -38,7 +38,7 @@ func getEditorCmd() string {
 	return "vi"
 }
 
-func (m *Model) openEditorComment(isPR bool) tea.Cmd {
+func (m *Model) openEditorComment(isPR bool, initialBody string) tea.Cmd {
 	var number int
 	var repoName string
 	var sectionId int
@@ -94,6 +94,9 @@ func (m *Model) openEditorComment(isPR bool) tea.Cmd {
 		kind, number, repoName,
 	)
 	_, _ = fmt.Fprint(tmpFile, header)
+	if initialBody != "" {
+		_, _ = fmt.Fprint(tmpFile, initialBody)
+	}
 	tmpFile.Close()
 
 	editor := getEditorCmd()

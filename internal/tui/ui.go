@@ -213,6 +213,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.sidebar.ScrollToBottom()
 						return m, cmd
 					}
+				case prview.PRActionEditorComment:
+					quote := m.prView.GetSelectedCommentQuote()
+					return m, m.openEditorComment(true, quote)
 				case prview.PRActionEnterCommentNavMode:
 					m.prView.ExitCommentNavMode()
 				}
@@ -229,13 +232,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.issueSidebar.IsCommentNavMode() {
 			var action *issueview.IssueAction
 			m.issueSidebar, cmd, action = m.issueSidebar.Update(msg)
-			if action != nil && action.Type == issueview.IssueActionQuoteReply {
-				comment := m.issueSidebar.GetSelectedComment()
-				if comment != nil {
-					cmd = m.issueSidebar.SetIsQuoteReplying(comment)
-					m.syncSidebar()
-					m.sidebar.ScrollToBottom()
-					return m, cmd
+			if action != nil {
+				switch action.Type {
+				case issueview.IssueActionQuoteReply:
+					comment := m.issueSidebar.GetSelectedComment()
+					if comment != nil {
+						cmd = m.issueSidebar.SetIsQuoteReplying(comment)
+						m.syncSidebar()
+						m.sidebar.ScrollToBottom()
+						return m, cmd
+					}
+				case issueview.IssueActionEditorComment:
+					quote := m.issueSidebar.GetSelectedCommentQuote()
+					return m, m.openEditorComment(false, quote)
 				}
 			}
 			m.syncSidebar()
@@ -494,7 +503,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 
 			case key.Matches(msg, keys.PRKeys.EditorComment):
-				return m, m.openEditorComment(true)
+				return m, m.openEditorComment(true, "")
 			}
 		case m.ctx.View == config.IssuesView:
 			switch {
@@ -533,7 +542,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 
 			case key.Matches(msg, keys.IssueKeys.EditorComment):
-				return m, m.openEditorComment(false)
+				return m, m.openEditorComment(false, "")
 
 			case key.Matches(msg, keys.IssueKeys.ViewPRs):
 				m.ctx.View = m.switchSelectedView()
@@ -609,7 +618,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							return m, nil
 
 						case prview.PRActionEditorComment:
-							return m, m.openEditorComment(true)
+							return m, m.openEditorComment(true, "")
 
 						case prview.PRActionEnterCommentNavMode:
 							m.prView.EnterCommentNavMode()
@@ -690,7 +699,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 
 					case issueview.IssueActionEditorComment:
-						return m, m.openEditorComment(false)
+						return m, m.openEditorComment(false, "")
 					}
 				}
 

@@ -900,6 +900,22 @@ func (m *Model) SetIsQuoteReplying(c *comment) tea.Cmd {
 	return tea.Sequence(textarea.Blink, m.inputBox.Focus())
 }
 
+func (m *Model) GetSelectedCommentQuote() string {
+	c := m.GetSelectedComment()
+	if c == nil {
+		return ""
+	}
+	var lines []string
+	lines = append(lines, fmt.Sprintf("> @%s wrote:", c.Author))
+	lines = append(lines, ">")
+	for _, line := range strings.Split(c.Body, "\n") {
+		lines = append(lines, "> "+line)
+	}
+	lines = append(lines, "")
+	lines = append(lines, "")
+	return strings.Join(lines, "\n")
+}
+
 func (m *Model) expandInputBoxForCommenting() {
 	// Set input box to about 75% of the main content height
 	expandedHeight := int(float64(m.ctx.MainContentHeight) * 0.75)
