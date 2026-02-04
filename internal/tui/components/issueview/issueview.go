@@ -269,6 +269,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd, *IssueAction) {
 				return m, nil, &IssueAction{Type: IssueActionReopen}
 			case key.Matches(msg, keys.IssueKeys.EnterCommentNavMode):
 				return m, nil, &IssueAction{Type: IssueActionEnterCommentNavMode}
+			case key.Matches(msg, keys.IssueKeys.EditorComment):
+				return m, nil, &IssueAction{Type: IssueActionEditorComment}
 			}
 			return m, nil, nil
 		}

@@ -22,6 +22,7 @@ type IssueKeyMap struct {
 	NextComment          key.Binding
 	PrevComment          key.Binding
 	EnterCommentNavMode  key.Binding
+	EditorComment        key.Binding
 }
 
 var IssueKeys = IssueKeyMap{
@@ -69,6 +70,10 @@ var IssueKeys = IssueKeyMap{
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "navigate comments"),
 	),
+	EditorComment: key.NewBinding(
+		key.WithKeys("E"),
+		key.WithHelp("E", "comment in editor"),
+	),
 }
 
 func IssueFullHelp() []key.Binding {
@@ -82,6 +87,7 @@ func IssueFullHelp() []key.Binding {
 		IssueKeys.ToggleSmartFiltering,
 		IssueKeys.ViewPRs,
 		IssueKeys.EnterCommentNavMode,
+		IssueKeys.EditorComment,
 	}
 }
 
@@ -134,6 +140,8 @@ func rebindIssueKeys(keys []config.Keybinding) error {
 			key = &IssueKeys.PrevComment
 		case "enterCommentNavMode":
 			key = &IssueKeys.EnterCommentNavMode
+		case "editorComment":
+			key = &IssueKeys.EditorComment
 		default:
 			return fmt.Errorf("unknown built-in issue key: '%s'", issueKey.Builtin)
 		}

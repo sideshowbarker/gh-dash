@@ -28,6 +28,7 @@ const (
 	PRActionNextComment
 	PRActionPrevComment
 	PRActionEnterCommentNavMode
+	PRActionEditorComment
 )
 
 // PRAction represents an action to be performed on a PR.
@@ -75,6 +76,8 @@ func MsgToAction(msg tea.Msg) *PRAction {
 		return &PRAction{Type: PRActionPrevComment}
 	case key.Matches(keyMsg, keys.PRKeys.EnterCommentNavMode):
 		return &PRAction{Type: PRActionEnterCommentNavMode}
+	case key.Matches(keyMsg, keys.PRKeys.EditorComment):
+		return &PRAction{Type: PRActionEditorComment}
 	}
 
 	return nil

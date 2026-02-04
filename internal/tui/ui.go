@@ -456,6 +456,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prView.SetSummaryViewMore()
 				m.syncSidebar()
 				return m, nil
+
+			case key.Matches(msg, keys.PRKeys.EditorComment):
+				return m, m.openEditorComment(true)
 			}
 		case m.ctx.View == config.IssuesView:
 			switch {
@@ -492,6 +495,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.syncSidebar()
 				}
 				return m, nil
+
+			case key.Matches(msg, keys.IssueKeys.EditorComment):
+				return m, m.openEditorComment(false)
 
 			case key.Matches(msg, keys.IssueKeys.ViewPRs):
 				m.ctx.View = m.switchSelectedView()
@@ -565,6 +571,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							m.prView.SetSummaryViewMore()
 							m.syncSidebar()
 							return m, nil
+
+						case prview.PRActionEditorComment:
+							return m, m.openEditorComment(true)
 						}
 					}
 				}
@@ -638,6 +647,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							return m, cmd
 						}
 						return m, nil
+
+					case issueview.IssueActionEditorComment:
+						return m, m.openEditorComment(false)
 					}
 				}
 
@@ -847,6 +859,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if msg.Id == m.currSectionId {
 			cmds = append(cmds, m.onViewedRowChanged())
+		}
+
+	case editorCommentFinishedMsg:
+		if msg.Body == "" {
+			cmd = m.notify("Comment cancelled")
+		} else {
+			cmd = m.submitEditorComment(msg)
 		}
 
 	case execProcessFinishedMsg, tea.FocusMsg:

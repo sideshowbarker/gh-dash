@@ -31,6 +31,7 @@ type PRKeyMap struct {
 	NextComment          key.Binding
 	PrevComment          key.Binding
 	EnterCommentNavMode  key.Binding
+	EditorComment        key.Binding
 }
 
 var PRKeys = PRKeyMap{
@@ -118,6 +119,10 @@ var PRKeys = PRKeyMap{
 		key.WithKeys("tab"),
 		key.WithHelp("tab", "navigate comments"),
 	),
+	EditorComment: key.NewBinding(
+		key.WithKeys("E"),
+		key.WithHelp("E", "comment in editor"),
+	),
 }
 
 func PRFullHelp() []key.Binding {
@@ -138,6 +143,7 @@ func PRFullHelp() []key.Binding {
 		PRKeys.WatchChecks,
 		PRKeys.ToggleSmartFiltering,
 		PRKeys.ViewIssues,
+		PRKeys.EditorComment,
 	}
 }
 
@@ -208,6 +214,8 @@ func rebindPRKeys(keys []config.Keybinding) error {
 			key = &PRKeys.PrevComment
 		case "enterCommentNavMode":
 			key = &PRKeys.EnterCommentNavMode
+		case "editorComment":
+			key = &PRKeys.EditorComment
 		default:
 			return fmt.Errorf("unknown built-in pr key: '%s'", prKey.Builtin)
 		}
