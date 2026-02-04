@@ -197,6 +197,35 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 
+		if m.prView.IsCommentNavMode() {
+			action := prview.MsgToAction(msg)
+			if action != nil {
+				switch action.Type {
+				case prview.PRActionNextComment:
+					m.prView.SelectNextComment()
+				case prview.PRActionPrevComment:
+					m.prView.SelectPrevComment()
+				case prview.PRActionQuoteReply:
+					comment := m.prView.GetSelectedComment()
+					if comment != nil {
+						cmd = m.prView.SetIsQuoteReplying(comment)
+						m.syncSidebar()
+						m.sidebar.ScrollToBottom()
+						return m, cmd
+					}
+				case prview.PRActionEnterCommentNavMode:
+					m.prView.ExitCommentNavMode()
+				}
+			} else if msg.Type == tea.KeyEsc {
+				m.prView.ExitCommentNavMode()
+			}
+			m.syncSidebar()
+			if percent := m.prView.GetCommentScrollPercent(); percent >= 0 {
+				m.sidebar.ScrollToPercent(percent)
+			}
+			return m, cmd
+		}
+
 		if m.issueSidebar.IsCommentNavMode() {
 			var action *issueview.IssueAction
 			m.issueSidebar, cmd, action = m.issueSidebar.Update(msg)
@@ -457,6 +486,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.syncSidebar()
 				return m, nil
 
+			case key.Matches(msg, keys.PRKeys.EnterCommentNavMode):
+				if m.sidebar.IsOpen {
+					m.prView.EnterCommentNavMode()
+					m.syncSidebar()
+				}
+				return m, nil
+
 			case key.Matches(msg, keys.PRKeys.EditorComment):
 				return m, m.openEditorComment(true)
 			}
@@ -574,6 +610,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 						case prview.PRActionEditorComment:
 							return m, m.openEditorComment(true)
+
+						case prview.PRActionEnterCommentNavMode:
+							m.prView.EnterCommentNavMode()
+							m.syncSidebar()
+							return m, nil
 						}
 					}
 				}
@@ -978,7 +1019,7 @@ func (m Model) View() string {
 						Render(m.ctx.Error.Error()),
 				)),
 		)
-	} else if m.issueSidebar.IsCommentNavMode() {
+	} else if m.prView.IsCommentNavMode() || m.issueSidebar.IsCommentNavMode() {
 		s.WriteString(m.renderCommentNavFooter())
 	} else {
 		s.WriteString(m.footer.View())
@@ -988,8 +1029,15 @@ func (m Model) View() string {
 }
 
 func (m Model) renderCommentNavFooter() string {
-	selectedIdx := m.issueSidebar.GetSelectedCommentIndex()
-	numComments := m.issueSidebar.GetNumComments()
+	var selectedIdx int
+	var numComments int
+	if m.prView.IsCommentNavMode() {
+		selectedIdx = m.prView.GetSelectedCommentIndex()
+		numComments = m.prView.GetNumComments()
+	} else {
+		selectedIdx = m.issueSidebar.GetSelectedCommentIndex()
+		numComments = m.issueSidebar.GetNumComments()
+	}
 
 	modeStyle := lipgloss.NewStyle().
 		Bold(true).
