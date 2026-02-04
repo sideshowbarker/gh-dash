@@ -1599,6 +1599,10 @@ func (m *Model) setCurrentViewSections(newSections []section.Section) {
 func (m *Model) switchSelectedView() config.ViewType {
 	repoFF := config.IsFeatureEnabled(config.FF_REPO_VIEW)
 
+	// Exit comment nav mode when switching views
+	m.prView.ExitCommentNavMode()
+	m.issueSidebar.ExitCommentNavMode()
+
 	// Reset notification subject when leaving notifications view
 	if m.ctx.View == config.NotificationsView {
 		keys.SetNotificationSubject(keys.NotificationSubjectNone)
