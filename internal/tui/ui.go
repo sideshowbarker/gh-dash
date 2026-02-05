@@ -1140,6 +1140,8 @@ func (m *Model) markNotificationAsRead(notificationId string) {
 }
 
 func (m *Model) onViewedRowChanged() tea.Cmd {
+	m.prView.ExitCommentNavMode()
+	m.issueSidebar.ExitCommentNavMode()
 	m.prView.SetSummaryViewLess()
 	m.prView.GoToFirstTab()
 	sidebarCmd := m.syncSidebar()
@@ -1290,6 +1292,10 @@ func (m *Model) syncSidebar() tea.Cmd {
 			return nil
 		}
 
+		// Clear cached subject when navigating to a different notification
+		// so key dispatch in the notification view handler doesn't route
+		// keys to the wrong subject's handler.
+		m.notificationView.ClearSubject()
 		// Show prompt to view notification (don't auto-fetch)
 		// User must press Enter to view content and mark as read
 		m.sidebar.SetContent(m.renderNotificationPrompt(row, width))
