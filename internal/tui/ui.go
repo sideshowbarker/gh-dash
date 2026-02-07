@@ -222,7 +222,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else if msg.Type == tea.KeyEsc {
 				m.prView.ExitCommentNavMode()
 			}
-			m.syncSidebar()
+			// Update sidebar content without calling SetRow (which would recreate the PR struct)
+			m.sidebar.SetContent(m.prView.View())
 			if percent := m.prView.GetCommentScrollPercent(); percent >= 0 {
 				m.sidebar.ScrollToPercent(percent)
 			}
@@ -247,7 +248,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m, m.openEditorComment(false, quote)
 				}
 			}
-			m.syncSidebar()
+			// Update sidebar content without calling SetRow (which would recreate the issue struct)
+			m.sidebar.SetContent(m.issueSidebar.View())
 			// Scroll to show selected comment
 			if percent := m.issueSidebar.GetCommentScrollPercent(); percent >= 0 {
 				m.sidebar.ScrollToPercent(percent)
