@@ -169,6 +169,7 @@ func (m *Model) Update(msg tea.Msg) (section.Section, tea.Cmd) {
 	}
 
 	search, searchCmd := m.SearchBar.Update(msg)
+	m.Table.SetRows(m.BuildRows())
 	m.SearchBar = search
 
 	prompt, promptCmd := m.PromptConfirmationBox.Update(msg)
@@ -197,7 +198,6 @@ func GetSectionColumns(
 	)
 	stateLayout := config.MergeColumnConfigs(dLayout.State, sLayout.State)
 	repoLayout := config.MergeColumnConfigs(dLayout.Repo, sLayout.Repo)
-	typeLayout := config.MergeColumnConfigs(dLayout.Type, sLayout.Type)
 	titleLayout := config.MergeColumnConfigs(dLayout.Title, sLayout.Title)
 	creatorLayout := config.MergeColumnConfigs(dLayout.Creator, sLayout.Creator)
 	assigneesLayout := config.MergeColumnConfigs(
@@ -224,11 +224,6 @@ func GetSectionColumns(
 			Title:  "",
 			Width:  repoLayout.Width,
 			Hidden: repoLayout.Hidden,
-		},
-		{
-			Title:  "Type",
-			Width:  typeLayout.Width,
-			Hidden: typeLayout.Hidden,
 		},
 		{
 			Title:  "Title",
@@ -275,9 +270,10 @@ func GetSectionColumns(
 
 func (m Model) BuildRows() []table.Row {
 	var rows []table.Row
-	for _, currIssue := range m.Issues {
+	currItem := m.Table.GetCurrItem()
+	for i, currIssue := range m.Issues {
 		issueModel := issuerow.Issue{Ctx: m.Ctx, Data: currIssue, ShowAuthorIcon: m.ShowAuthorIcon}
-		rows = append(rows, issueModel.ToTableRow())
+		rows = append(rows, issueModel.ToTableRow(currItem == i))
 	}
 
 	if rows == nil {

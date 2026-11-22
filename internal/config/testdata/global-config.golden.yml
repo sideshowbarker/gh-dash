@@ -84,8 +84,6 @@ defaults:
         width: 5
       repo:
         width: 15
-      type:
-        width: 9
       linkedPrs:
         width: 6
       creator:

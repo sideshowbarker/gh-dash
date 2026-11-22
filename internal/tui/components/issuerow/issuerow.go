@@ -21,12 +21,11 @@ type Issue struct {
 	ShowAuthorIcon bool
 }
 
-func (issue *Issue) ToTableRow() table.Row {
+func (issue *Issue) ToTableRow(isSelected bool) table.Row {
 	return table.Row{
 		issue.renderStatus(),
 		issue.renderRepoName(),
-		issue.renderType(),
-		issue.renderTitle(),
+		issue.renderTitle(isSelected),
 		issue.renderOpenedBy(),
 		issue.renderAssignees(),
 		issue.renderLinkedPrs(),
@@ -72,23 +71,28 @@ func (issue *Issue) renderRepoName() string {
 	return issue.getTextStyle().Render(repoName)
 }
 
-func (issue *Issue) renderType() string {
-	issueType := issue.Data.IssueType
-	if issueType == nil {
-		return components.RenderEmptyCell(issue.Ctx)
-	}
-	return lipgloss.NewStyle().
-		Foreground(common.IssueTypeColor(issueType.Color)).
-		Render(issueType.Name)
-}
-
-func (issue *Issue) renderTitle() string {
-	return components.RenderIssueTitle(
+// renderTitle renders the issue's title -- after a pill with the issue's type, in the type's color, if it has one.
+func (issue *Issue) renderTitle(isSelected bool) string {
+	title := components.RenderIssueTitle(
 		issue.Ctx,
 		issue.Data.State,
 		issue.Data.Title,
 		issue.Data.Number,
 	)
+	if issue.Data.IssueType == nil {
+		return title
+	}
+
+	// The pill ends with a reset, which would clear a selected row's background behind the title -- so on a selected
+	// row, its caps get that background, and it's turned back on after the pill.
+	pillStyle := issue.Ctx.Styles.PrView.PillStyle
+	after := ""
+	if isSelected {
+		bg := issue.Ctx.Theme.SelectedBackground
+		pillStyle = pillStyle.BorderLeftBackground(bg).BorderRightBackground(bg)
+		after = common.StylePrefix(lipgloss.NewStyle().Background(bg))
+	}
+	return common.RenderIssueTypePill(*issue.Data.IssueType, pillStyle) + after + " " + title
 }
 
 func (issue *Issue) renderOpenedBy() string {

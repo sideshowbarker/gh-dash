@@ -1,6 +1,7 @@
 package issuerow
 
 import (
+	"strings"
 	"testing"
 
 	"charm.land/lipgloss/v2"
@@ -8,39 +9,50 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dlvhdr/gh-dash/v4/internal/config"
 	"github.com/dlvhdr/gh-dash/v4/internal/data"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/constants"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/theme"
 )
 
-func TestRenderType(t *testing.T) {
+func TestRenderTitle(t *testing.T) {
+	const title = "Crash on startup"
 	tests := []struct {
 		name      string
 		issueType *data.IssueType
-		expected  string
+		prefix    string
 	}{
-		{name: "no type renders the placeholder", issueType: nil, expected: constants.EmptyCell},
-		{name: "Bug", issueType: &data.IssueType{Name: "Bug", Color: "RED"}, expected: "Bug"},
-		{
-			name:      "Feature",
-			issueType: &data.IssueType{Name: "Feature", Color: "BLUE"},
-			expected:  "Feature",
-		},
+		{name: "no type renders just the title", issueType: nil, prefix: ""},
+		{name: "Bug", issueType: &data.IssueType{Name: "Bug", Color: "RED"}, prefix: "Bug"},
 		{
 			name:      "unknown color",
 			issueType: &data.IssueType{Name: "Epic", Color: "TEAL"},
-			expected:  "Epic",
+			prefix:    "Epic",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			issue := &Issue{
-				Ctx:  &context.ProgramContext{},
-				Data: data.IssueData{IssueType: tt.issueType},
+				Ctx: &context.ProgramContext{
+					Config: &config.Config{Theme: &config.ThemeConfig{}},
+					Theme:  *theme.DefaultTheme,
+				},
+				Data: data.IssueData{Title: title, IssueType: tt.issueType},
 			}
-			require.Equal(t, tt.expected, ansi.Strip(issue.renderType()))
+			got := ansi.Strip(issue.renderTitle(false))
+			if tt.prefix == "" {
+				require.Equal(t, title, got)
+				return
+			}
+			require.True(
+				t,
+				strings.HasSuffix(got, " "+title),
+				"title missing at the end of %q",
+				got,
+			)
+			require.Contains(t, strings.TrimSuffix(got, title), tt.prefix)
 		})
 	}
 }
@@ -132,4 +144,27 @@ func TestRenderNumComments(t *testing.T) {
 			require.Equal(t, tt.expected, ansi.Strip(issue.renderNumComments()))
 		})
 	}
+}
+
+// On a selected row, the pill's reset mustn't clear the row's background behind the title.
+func TestRenderTitleKeepsSelectedBackground(t *testing.T) {
+	ctx := &context.ProgramContext{
+		Config: &config.Config{Theme: &config.ThemeConfig{}},
+		Theme:  *theme.DefaultTheme,
+	}
+	ctx.Theme.SelectedBackground = solid("#006400")
+	issue := &Issue{
+		Ctx:  ctx,
+		Data: data.IssueData{Title: "Crash", IssueType: &data.IssueType{Name: "Bug", Color: "RED"}},
+	}
+
+	out := issue.renderTitle(true)
+	beforeTitle := out[:strings.LastIndex(out, "Crash")]
+	lastReset := max(
+		strings.LastIndex(beforeTitle, "\x1b[0m"),
+		strings.LastIndex(beforeTitle, "\x1b[m"),
+	)
+	require.GreaterOrEqual(t, lastReset, 0, "expected the pill to end with a reset in %q", out)
+	require.Contains(t, beforeTitle[lastReset:], "48;2;0;100;0",
+		"no background is restored between the pill's reset and the title in %q", out)
 }

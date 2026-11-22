@@ -80,7 +80,7 @@ func RenderLabels(labels []data.Label, opts LabelOpts) string {
 		return lipgloss.JoinVertical(lipgloss.Left, renderedRows...)
 	}
 
-	rowStylePrefix := stylePrefix(opts.RowStyle)
+	rowStylePrefix := StylePrefix(opts.RowStyle)
 	renderedRows := make([]string, 0, opts.MaxRows)
 	rowContentsWidth := 0
 	currentRowLabels := []string{}
@@ -187,7 +187,9 @@ func RenderLabels(labels []data.Label, opts LabelOpts) string {
 	return strings.Join(renderedRows, "\n")
 }
 
-func stylePrefix(style lipgloss.Style) string {
+// StylePrefix is the escape sequence that turns on the style -- for restoring it after styled content that ends
+// with a reset.
+func StylePrefix(style lipgloss.Style) string {
 	rendered := style.Render("x")
 	if rendered == "" {
 		return ""

@@ -25,7 +25,6 @@ By default, Issue views display the following columns in the order they're liste
 1. [`updatedAt`] with a width of 7 columns.
 1. [`state`] with a width of 3 columns.
 1. [`repo`] with a width of 15 columns.
-1. [`type`] with a width of 9 columns.
 1. [`title`], set to grow to fill available space.
 1. [`creator`] with a width of 10 columns.
 1. [`linkedPrs`] with a width of 6 columns.
@@ -44,7 +43,6 @@ By default, Issue views display the following columns in the order they're liste
 [`updatedAt`]:    #issues-updated-at-column
 [`state`]:        #issues-state-column
 [`repo`]:         #issues-repo-column
-[`type`]:         #issue-type-column
 [`title`]:        #issues-title-column
 [`creator`]:       #issues-creator-column
 [`linkedPrs`]:          #issue-linked-prs-column
@@ -107,33 +105,23 @@ The heading for this column is <NerdFontIcon icon="nf-oct-repo"/>
 
 [`width`]: /configuration/layout/options#column-width
 
-## Issue Type Column
-
-| Property | Type | Default                                            |
-| :------- | :--- | :------------------------------------------------- |
-| `type`   | yaml | <Code code={`width: 9`} lang="yaml" frame="none"/> |
-
-This column displays the Issue's [type], like `Bug`, `Feature`, or `Task`, in the color the
-type has on GitHub. It shows `—` for an Issue that has no type, and in repositories that
-don't use issue types.
-
-The heading for this column is `Type`.
-
-[type]: https://docs.github.com/en/issues/tracking-your-work-with-issues/configuring-issues/managing-issue-types-in-an-organization
-
 ## Issue Title Column
 
 | Property | Type | Default                                              |
 | :------- | :--- | :--------------------------------------------------- |
 | `title`  | yaml | <Code code={`grow: true`} lang="yaml" frame="none"/> |
 
-This column displays the Issue's number followed by its title. This column is always displayed
+This column displays the Issue's number followed by its title. If the Issue has a [type], like
+`Bug`, `Feature`, or `Task`, the title starts with a pill showing the type, in the color the type
+has on GitHub. This column is always displayed
 unless you set [`hidden`] to `false`. By default, it grows to fill the available space
 in the terminal after accounting for other column widths.
 
 The heading for this column is `Title`.
 
 The [`theme.colors.text.primary`] setting defines the issue number's color.
+
+[type]: https://docs.github.com/en/issues/tracking-your-work-with-issues/configuring-issues/managing-issue-types-in-an-organization
 
 [`hidden`]: /configuration/layout/options#hide-column
 [`theme.colors.text.primary`]: /configuration/theme#primary-text-color
