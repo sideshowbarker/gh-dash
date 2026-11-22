@@ -9,6 +9,7 @@ import (
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/dlvhdr/gh-dash/v4/internal/data"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/common"
@@ -251,17 +252,23 @@ func (m *Model) renderTitle() string {
 	)
 }
 
+// renderBranches renders the PR's base and head branch names, truncated to fit the sidebar, and below them the PR's
+// pills, wrapped onto further rows when they don't fit on one.
 func (m *Model) renderBranches() string {
-	return lipgloss.JoinHorizontal(lipgloss.Left,
-		" ",
+	// One column for the leading space, and one to spare before the sidebar's edge.
+	width := max(m.width-2, 1)
+	branches := lipgloss.NewStyle().
+		Foreground(m.ctx.Theme.SecondaryText).
+		Render(ansi.Truncate(m.pr.Data.Primary.BaseRefName+"  "+m.pr.Data.Primary.HeadRefName, width, constants.Ellipsis))
+
+	pills := common.WrapPills([]string{
 		m.renderStatusPill(),
 		m.renderLinkedIssuesPill(),
 		m.renderConflictsPill(),
 		m.renderUnresolvedThreadsPill(),
-		" ",
-		lipgloss.NewStyle().
-			Foreground(m.ctx.Theme.SecondaryText).
-			Render(m.pr.Data.Primary.BaseRefName+"  "+m.pr.Data.Primary.HeadRefName))
+	}, width)
+
+	return lipgloss.NewStyle().PaddingLeft(1).Render(branches + "\n\n" + pills)
 }
 
 func (m *Model) renderStatusPill() string {
@@ -285,7 +292,7 @@ func (m *Model) renderStatusPill() string {
 		Render(m.pr.RenderState())
 }
 
-// renderLinkedIssuesPill renders the number of issues the PR fixes, after a space -- or nothing, if it fixes none.
+// renderLinkedIssuesPill renders the number of issues the PR fixes -- or nothing, if it fixes none.
 func (m *Model) renderLinkedIssuesPill() string {
 	count := m.pr.Data.Primary.LinkedIssues.TotalCount
 	if count == 0 {
@@ -296,34 +303,33 @@ func (m *Model) renderLinkedIssuesPill() string {
 		noun = "issue"
 	}
 	bgColor := m.ctx.Theme.FaintText.Dark
-	return " " + m.ctx.Styles.PrView.PillStyle.
+	return m.ctx.Styles.PrView.PillStyle.
 		BorderForeground(bgColor).
 		Background(bgColor).
 		Render(fmt.Sprintf("%s %d %s", constants.IssueIcon, count, noun))
 }
 
-// renderConflictsPill renders a warning pill, after a space, if the PR has conflicts with its base branch -- or
-// nothing, if it doesn't.
+// renderConflictsPill renders a warning pill if the PR has conflicts with its base branch -- or nothing, if it doesn't.
 func (m *Model) renderConflictsPill() string {
 	if !m.pr.HasConflicts() {
 		return ""
 	}
 	bgColor := m.ctx.Theme.WarningText.Dark
-	return " " + m.ctx.Styles.PrView.PillStyle.
+	return m.ctx.Styles.PrView.PillStyle.
 		BorderForeground(bgColor).
 		Background(bgColor).
-		Render(constants.ConflictIcon+" Conflicts")
+		Render(constants.ConflictIcon + " Conflicts")
 }
 
-// renderUnresolvedThreadsPill renders the number of the PR's unresolved review threads, after a space -- or nothing,
-// if they're all resolved.
+// renderUnresolvedThreadsPill renders the number of the PR's unresolved review threads -- or nothing, if they're all
+// resolved.
 func (m *Model) renderUnresolvedThreadsPill() string {
 	count := m.pr.Data.Primary.ReviewThreads.UnresolvedCount()
 	if count == 0 {
 		return ""
 	}
 	bgColor := m.ctx.Theme.WarningText.Dark
-	return " " + m.ctx.Styles.PrView.PillStyle.
+	return m.ctx.Styles.PrView.PillStyle.
 		BorderForeground(bgColor).
 		Background(bgColor).
 		Render(fmt.Sprintf("%s %d unresolved", constants.UnresolvedIcon, count))

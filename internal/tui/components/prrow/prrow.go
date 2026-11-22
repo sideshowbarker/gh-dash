@@ -58,9 +58,9 @@ func (pr *PullRequest) renderConflicts() string {
 	return lipgloss.NewStyle().Foreground(pr.Ctx.Theme.WarningText).Render(constants.ConflictIcon)
 }
 
-// renderNumComments renders the number of the PR's comments and review threads. If any of those threads are
-// unresolved, their number comes first, in the warning color: "1/5" is 1 unresolved thread out of 5 comments and
-// threads.
+// renderNumComments renders the number of the PR's comments and review threads -- or the empty-cell placeholder, if
+// it has none. If any of those threads are unresolved, their number comes first, in the warning color: "1/5" is 1
+// unresolved thread out of 5 comments and threads.
 func (pr *PullRequest) renderNumComments() string {
 	if pr.Data == nil || pr.Data.Primary == nil {
 		return "-"
@@ -68,6 +68,9 @@ func (pr *PullRequest) renderNumComments() string {
 
 	numCommentsStyle := pr.Ctx.Styles.Common.FaintTextStyle
 	total := pr.Data.Primary.Comments.TotalCount + pr.Data.Primary.ReviewThreads.TotalCount
+	if total == 0 {
+		return components.RenderEmptyCell(pr.Ctx)
+	}
 	unresolved := pr.Data.Primary.ReviewThreads.UnresolvedCount()
 	if unresolved == 0 {
 		return numCommentsStyle.Render(fmt.Sprintf("%d", total))

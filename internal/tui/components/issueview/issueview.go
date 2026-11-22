@@ -131,13 +131,10 @@ func (m Model) View() string {
 
 	s.WriteString(m.renderTitle())
 	s.WriteString("\n\n")
-	s.WriteString(m.renderStatusPill())
-	for _, pill := range []string{m.renderTypePill(), m.renderLinkedPrsPill()} {
-		if pill != "" {
-			s.WriteString(" ")
-			s.WriteString(pill)
-		}
-	}
+	s.WriteString(common.WrapPills(
+		[]string{m.renderStatusPill(), m.renderTypePill(), m.renderLinkedPrsPill()},
+		m.getIndentedContentWidth(),
+	))
 	s.WriteString("\n\n")
 	s.WriteString(m.renderAuthor())
 	s.WriteString("\n\n")

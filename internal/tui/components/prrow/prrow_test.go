@@ -417,7 +417,7 @@ func TestRenderNumComments(t *testing.T) {
 		threads  data.ReviewThreads
 		expected string
 	}{
-		{name: "no comments", threads: threads(), expected: "0"},
+		{name: "no comments", threads: threads(), expected: constants.EmptyCell},
 		{
 			name:     "comments and resolved threads",
 			comments: 3,

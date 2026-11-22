@@ -112,3 +112,24 @@ func TestRenderLinkedPrs(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderNumComments(t *testing.T) {
+	tests := []struct {
+		name     string
+		count    int
+		expected string
+	}{
+		{name: "no comments renders the placeholder", count: 0, expected: constants.EmptyCell},
+		{name: "comments render their count", count: 4, expected: "4"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			issue := &Issue{
+				Ctx:  &context.ProgramContext{Theme: *theme.DefaultTheme},
+				Data: data.IssueData{Comments: data.IssueComments{TotalCount: tt.count}},
+			}
+			require.Equal(t, tt.expected, ansi.Strip(issue.renderNumComments()))
+		})
+	}
+}

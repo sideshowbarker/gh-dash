@@ -133,7 +133,11 @@ func (issue *Issue) renderLinkedPrs() string {
 	return lipgloss.NewStyle().Foreground(issue.LinkedPrsColor()).Render(fmt.Sprintf("%d", count))
 }
 
+// renderNumComments renders the number of comments on the issue -- or the empty-cell placeholder, if it has none.
 func (issue *Issue) renderNumComments() string {
+	if issue.Data.Comments.TotalCount == 0 {
+		return components.RenderEmptyCell(issue.Ctx)
+	}
 	return issue.getTextStyle().Render(fmt.Sprintf("%d", issue.Data.Comments.TotalCount))
 }
 
