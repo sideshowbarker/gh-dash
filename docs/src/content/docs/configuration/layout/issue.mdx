@@ -27,9 +27,9 @@ By default, Issue views display the following columns in the order they're liste
 1. [`repo`] with a width of 15 columns.
 1. [`title`], set to grow to fill available space.
 1. [`creator`] with a width of 10 columns.
-1. [`linkedPrs`] with a width of 6 columns.
-1. [`comments`] with a width of 3 columns.
-1. [`reactions`] with a width of 3 columns.
+1. [`linkedPrs`] with a width of 3 columns.
+1. [`comments`] with a width of 5 columns.
+1. [`reactions`] with a width of 6 columns.
 
 <Aside type="caution" title="Watch out!">
   Even though the `state`, `title`, `comments`, and `reactions` settings
@@ -158,7 +158,7 @@ The heading for this column is `Assignees`.
 
 | Property    | Type | Default                                            |
 | :---------- | :--- | :------------------------------------------------- |
-| `linkedPrs` | yaml | <Code code={`width: 6`} lang="yaml" frame="none"/> |
+| `linkedPrs` | yaml | <Code code={`width: 3`} lang="yaml" frame="none"/> |
 
 This column displays the number of open and merged PRs that will close the Issue when merged,
 or that closed it. The number is in the open-PR color if any of those PRs is open and not a
@@ -171,7 +171,7 @@ The heading for this column is <NerdFontIcon icon="nf-oct-git_pull_request"/>.
 
 | Property   | Type | Default                                            |
 | :--------- | :--- | :------------------------------------------------- |
-| `comments` | yaml | <Code code={`width: 3`} lang="yaml" frame="none"/> |
+| `comments` | yaml | <Code code={`width: 5`} lang="yaml" frame="none"/> |
 
 This column displays the count of comments on the issue as an integer, or `—` if it has none.
 
@@ -181,7 +181,7 @@ The heading for this column is <NerdFontIcon icon="nf-oct-comment_discussion"/>
 
 | Property    | Type | Default                                            |
 | :---------- | :--- | :------------------------------------------------- |
-| `reactions` | yaml | <Code code={`width: 3`} lang="yaml" frame="none"/> |
+| `reactions` | yaml | <Code code={`width: 6`} lang="yaml" frame="none"/> |
 
 This column displays the count of all reactions on the issue as an integer.
 

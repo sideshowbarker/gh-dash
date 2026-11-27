@@ -162,7 +162,7 @@ export function GET() {
             },
           ],
           default: {
-            width: 5,
+            width: 3,
           },
         },
         numComments: {

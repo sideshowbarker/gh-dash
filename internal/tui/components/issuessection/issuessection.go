@@ -247,12 +247,12 @@ func GetSectionColumns(
 		},
 		{
 			Title:  constants.CommentsIcon,
-			Width:  &issueNumCommentsCellWidth,
+			Width:  commentsLayout.Width,
 			Hidden: commentsLayout.Hidden,
 		},
 		{
 			Title:  "",
-			Width:  &issueNumCommentsCellWidth,
+			Width:  reactionsLayout.Width,
 			Hidden: reactionsLayout.Hidden,
 		},
 		{

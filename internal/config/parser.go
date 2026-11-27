@@ -394,7 +394,7 @@ func (parser ConfigParser) getDefaultConfig() Config {
 						Width: utils.IntPtr(lipgloss.Width(" +31.4k -31.6k ")),
 					},
 					LinkedIssues: ColumnConfig{
-						Width: utils.IntPtr(5),
+						Width: utils.IntPtr(3),
 					},
 					Conflicts: ColumnConfig{
 						Width: utils.IntPtr(3),
@@ -411,6 +411,12 @@ func (parser ConfigParser) getDefaultConfig() Config {
 						Width: utils.IntPtr(15),
 					},
 					LinkedPrs: ColumnConfig{
+						Width: utils.IntPtr(3),
+					},
+					Comments: ColumnConfig{
+						Width: utils.IntPtr(5),
+					},
+					Reactions: ColumnConfig{
 						Width: utils.IntPtr(6),
 					},
 					Creator: ColumnConfig{

@@ -127,7 +127,7 @@ export function GET() {
             },
           ],
           default: {
-            width: 6,
+            width: 3,
           },
         },
         comments: {
@@ -140,6 +140,9 @@ export function GET() {
               $ref: "./options.json",
             },
           ],
+          default: {
+            width: 5,
+          },
         },
         reactions: {
           title: "Issue Reactions Column",
@@ -151,6 +154,9 @@ export function GET() {
               $ref: "./options.json",
             },
           ],
+          default: {
+            width: 6,
+          },
         },
       },
     }),
