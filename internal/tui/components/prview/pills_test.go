@@ -10,12 +10,15 @@ import (
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/constants"
 )
 
-func unresolvedThreads(resolved ...bool) data.ReviewThreads {
-	threads := data.ReviewThreads{TotalCount: len(resolved)}
+// withThreads gives the model's PR enriched data with review threads in the given resolved states.
+func withThreads(m Model, resolved ...bool) Model {
+	threads := data.ReviewThreadsWithComments{}
 	for _, r := range resolved {
-		threads.Nodes = append(threads.Nodes, struct{ IsResolved bool }{IsResolved: r})
+		threads.Nodes = append(threads.Nodes, data.ReviewThreadWithComments{IsResolved: r})
 	}
-	return threads
+	m.pr.Data.Enriched.ReviewThreads = threads
+	m.pr.Data.IsEnriched = true
+	return m
 }
 
 func TestStatusRowPillsAreBlankWhenThereIsNothingToShow(t *testing.T) {
@@ -58,19 +61,22 @@ func TestRenderConflictsPill(t *testing.T) {
 }
 
 func TestRenderUnresolvedThreadsPill(t *testing.T) {
-	m := newTestModel(t, &data.PullRequestData{
-		State:         "OPEN",
-		ReviewThreads: unresolvedThreads(true, false, false),
-	}, nil, nil)
+	m := withThreads(
+		newTestModel(t, &data.PullRequestData{State: "OPEN"}, nil, nil),
+		true,
+		false,
+		false,
+	)
 	require.Contains(
 		t,
 		ansi.Strip(m.renderUnresolvedThreadsPill()),
 		constants.UnresolvedIcon+" 2 unresolved",
 	)
 
-	allResolved := newTestModel(t, &data.PullRequestData{
-		State:         "OPEN",
-		ReviewThreads: unresolvedThreads(true, true),
-	}, nil, nil)
+	allResolved := withThreads(
+		newTestModel(t, &data.PullRequestData{State: "OPEN"}, nil, nil),
+		true,
+		true,
+	)
 	require.Empty(t, allResolved.renderUnresolvedThreadsPill())
 }

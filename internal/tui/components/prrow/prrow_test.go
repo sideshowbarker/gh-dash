@@ -403,21 +403,29 @@ func TestRenderConflicts(t *testing.T) {
 }
 
 func TestRenderNumComments(t *testing.T) {
-	threads := func(resolved ...bool) data.ReviewThreads {
-		rt := data.ReviewThreads{TotalCount: len(resolved)}
+	threads := func(resolved ...bool) data.ReviewThreadsWithComments {
+		rt := data.ReviewThreadsWithComments{}
 		for _, r := range resolved {
-			rt.Nodes = append(rt.Nodes, struct{ IsResolved bool }{IsResolved: r})
+			rt.Nodes = append(rt.Nodes, data.ReviewThreadWithComments{IsResolved: r})
 		}
 		return rt
 	}
 
 	tests := []struct {
-		name     string
-		comments int
-		threads  data.ReviewThreads
-		expected string
+		name        string
+		comments    int
+		threads     data.ReviewThreadsWithComments
+		notEnriched bool
+		expected    string
 	}{
 		{name: "no comments", threads: threads(), expected: constants.EmptyCell},
+		{
+			name:        "unresolved threads aren't known until the PR's enriched",
+			comments:    2,
+			threads:     threads(true, false, false),
+			notEnriched: true,
+			expected:    "5",
+		},
 		{
 			name:     "comments and resolved threads",
 			comments: 3,
@@ -439,10 +447,14 @@ func TestRenderNumComments(t *testing.T) {
 				Foreground(theme.DefaultTheme.FaintText)
 			pr := &PullRequest{
 				Ctx: ctx,
-				Data: &Data{Primary: &data.PullRequestData{
-					Comments:      data.Comments{TotalCount: tt.comments},
-					ReviewThreads: tt.threads,
-				}},
+				Data: &Data{
+					Primary: &data.PullRequestData{
+						Comments:      data.Comments{TotalCount: tt.comments},
+						ReviewThreads: data.ReviewThreads{TotalCount: len(tt.threads.Nodes)},
+					},
+					Enriched:   data.EnrichedPullRequestData{ReviewThreads: tt.threads},
+					IsEnriched: !tt.notEnriched,
+				},
 			}
 			out := pr.renderNumComments()
 			if got := ansi.Strip(out); got != tt.expected {

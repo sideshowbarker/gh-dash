@@ -58,6 +58,15 @@ func (pr *PullRequest) renderConflicts() string {
 	return lipgloss.NewStyle().Foreground(pr.Ctx.Theme.WarningText).Render(constants.ConflictIcon)
 }
 
+// UnresolvedThreads is the number of the PR's review threads that aren't resolved. That comes from the enriched query,
+// since fetching every thread's state for every PR would slow down the PR list -- so it's 0 until the PR's been enriched.
+func (pr *PullRequest) UnresolvedThreads() int {
+	if pr.Data == nil || !pr.Data.IsEnriched {
+		return 0
+	}
+	return pr.Data.Enriched.ReviewThreads.UnresolvedCount()
+}
+
 // renderNumComments renders the number of the PR's comments and review threads -- or the empty-cell placeholder, if
 // it has none. If any of those threads are unresolved, their number comes first, in the warning color: "1/5" is 1
 // unresolved thread out of 5 comments and threads.
@@ -71,7 +80,7 @@ func (pr *PullRequest) renderNumComments() string {
 	if total == 0 {
 		return components.RenderEmptyCell(pr.Ctx)
 	}
-	unresolved := pr.Data.Primary.ReviewThreads.UnresolvedCount()
+	unresolved := pr.UnresolvedThreads()
 	if unresolved == 0 {
 		return numCommentsStyle.Render(fmt.Sprintf("%d", total))
 	}

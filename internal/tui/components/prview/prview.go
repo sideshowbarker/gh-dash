@@ -324,7 +324,7 @@ func (m *Model) renderConflictsPill() string {
 // renderUnresolvedThreadsPill renders the number of the PR's unresolved review threads -- or nothing, if they're all
 // resolved.
 func (m *Model) renderUnresolvedThreadsPill() string {
-	count := m.pr.Data.Primary.ReviewThreads.UnresolvedCount()
+	count := m.pr.UnresolvedThreads()
 	if count == 0 {
 		return ""
 	}

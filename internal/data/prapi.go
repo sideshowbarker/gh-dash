@@ -90,7 +90,7 @@ type PullRequestData struct {
 	Repository       Repository
 	Assignees        Assignees            `graphql:"assignees(first: 3)"`
 	Comments         Comments             `graphql:"comments"`
-	ReviewThreads    ReviewThreads        `graphql:"reviewThreads(first: 100)"`
+	ReviewThreads    ReviewThreads        `graphql:"reviewThreads"`
 	Reviews          ReviewsNumber        `graphql:"reviews"`
 	ReviewRequests   ReviewRequestsNumber `graphql:"reviewRequests"`
 	IsDraft          bool
@@ -280,21 +280,6 @@ type Comments struct {
 
 type ReviewThreads struct {
 	TotalCount int
-	Nodes      []struct {
-		IsResolved bool
-	}
-}
-
-// UnresolvedCount is the number of the PR's review threads that aren't resolved, outdated ones included -- out of the
-// first 100 threads, which is all the query fetches.
-func (t ReviewThreads) UnresolvedCount() int {
-	count := 0
-	for _, thread := range t.Nodes {
-		if !thread.IsResolved {
-			count++
-		}
-	}
-	return count
 }
 
 type Review struct {
@@ -315,16 +300,31 @@ type Reviews struct {
 	Nodes      []Review
 }
 
+type ReviewThreadWithComments struct {
+	Id           string
+	IsOutdated   bool
+	IsResolved   bool
+	OriginalLine int
+	StartLine    int
+	Line         int
+	Path         string
+	Comments     ReviewComments `graphql:"comments(first: 20)"`
+}
+
 type ReviewThreadsWithComments struct {
-	Nodes []struct {
-		Id           string
-		IsOutdated   bool
-		OriginalLine int
-		StartLine    int
-		Line         int
-		Path         string
-		Comments     ReviewComments `graphql:"comments(first: 20)"`
+	Nodes []ReviewThreadWithComments
+}
+
+// UnresolvedCount is the number of the PR's review threads that aren't resolved, outdated ones included -- out of the
+// last 50 threads, which is all the enriched query fetches.
+func (t ReviewThreadsWithComments) UnresolvedCount() int {
+	count := 0
+	for _, thread := range t.Nodes {
+		if !thread.IsResolved {
+			count++
+		}
 	}
+	return count
 }
 
 type ChangedFile struct {
