@@ -10,7 +10,6 @@ import (
 	"github.com/dlvhdr/gh-dash/v4/internal/data"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/common"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components"
-	cmputils "github.com/dlvhdr/gh-dash/v4/internal/tui/components"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/components/table"
 	"github.com/dlvhdr/gh-dash/v4/internal/tui/context"
 	"github.com/dlvhdr/gh-dash/v4/internal/utils"
@@ -143,10 +142,10 @@ func (issue *Issue) renderNumComments() string {
 	if issue.Data.Comments.TotalCount == 0 {
 		return components.RenderEmptyCell(issue.Ctx)
 	}
-	return issue.getTextStyle().Render(cmputils.FormatNumber(issue.Data.Comments.TotalCount))
+	return issue.getTextStyle().Render(components.FormatNumber(issue.Data.Comments.TotalCount))
 }
 
 func (issue *Issue) renderNumReactions() string {
 	return issue.getTextStyle().
-		Render(cmputils.FormatNumber(issue.Data.Reactions.TotalCount))
+		Render(components.FormatNumber(issue.Data.Reactions.TotalCount))
 }

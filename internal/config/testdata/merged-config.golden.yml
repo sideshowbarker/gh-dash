@@ -65,7 +65,7 @@ defaults:
       lines:
         width: 15
       linkedIssues:
-        width: 5
+        width: 3
       conflicts:
         width: 3
     issues:
@@ -76,6 +76,10 @@ defaults:
       repo:
         width: 15
       linkedPrs:
+        width: 3
+      comments:
+        width: 5
+      reactions:
         width: 6
       creator:
         width: 10
